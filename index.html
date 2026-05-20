@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portal Snake Deluxe</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#0f0f14;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+
+h1{
+    margin-top:10px;
+}
+
+canvas{
+    background:#000;
+    border:3px solid #444;
+    margin-top:10px;
+}
+
+#ui{
+    margin-top:8px;
+    font-size:18px;
+}
+
+.effect-buff{
+    color:orange;
+}
+
+.effect-debuff{
+    color:lightblue;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Portal Snake Deluxe</h1>
+<p>Move with <b>W A S D</b></p>
+
+<canvas id="game" width="600" height="600"></canvas>
+
+<div id="ui">
+Score: <span id="score">0</span> |
+Effect: <span id="effect">None</span>
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const grid = 20;
+const tiles = 30;
+
+let snake = [{x:15,y:15}];
+
+let dir = {x:1,y:0};
+
+let score = 0;
+
+let effect = "none";
+let effectTimer = 0;
+
+let speed = 140;
+
+let portalAnim = 0;
+
+function rand(){
+    return Math.floor(Math.random()*tiles);
+}
+
+function randomPos(){
+    return {x:rand(),y:rand()};
+}
+
+let food = spawnFood();
+
+let portalA = randomPos();
+let portalB = randomPos();
+
+function spawnFood(){
+
+    let r = Math.random();
+
+    if(r < 0.10){
+        return {type:"mango",...randomPos()};
+    }
+
+    if(r < 0.20){
+        return {type:"pear",...randomPos()};
+    }
+
+    return {type:"apple",...randomPos()};
+}
+
+document.addEventListener("keydown",(e)=>{
+
+    let k = e.key.toLowerCase();
+
+    if(k==="w" && dir.y===0){
+        dir={x:0,y:-1}
+    }
+
+    if(k==="s" && dir.y===0){
+        dir={x:0,y:1}
+    }
+
+    if(k==="a" && dir.x===0){
+        dir={x:-1,y:0}
+    }
+
+    if(k==="d" && dir.x===0){
+        dir={x:1,y:0}
+    }
+
+})
+
+function update(){
+
+    let head={
+        x:snake[0].x+dir.x,
+        y:snake[0].y+dir.y
+    }
+
+    if(head.x<0) head.x=tiles-1
+    if(head.y<0) head.y=tiles-1
+    if(head.x>=tiles) head.x=0
+    if(head.y>=tiles) head.y=0
+
+    if(head.x===portalA.x && head.y===portalA.y){
+        head.x=portalB.x
+        head.y=portalB.y
+    }
+    else if(head.x===portalB.x && head.y===portalB.y){
+        head.x=portalA.x
+        head.y=portalA.y
+    }
+
+    for(let s of snake){
+        if(s.x===head.x && s.y===head.y){
+            gameOver()
+        }
+    }
+
+    snake.unshift(head)
+
+    if(head.x===food.x && head.y===food.y){
+
+        if(food.type==="apple"){
+            score++
+        }
+
+        if(food.type==="mango"){
+            effect="buff"
+            effectTimer=200
+        }
+
+        if(food.type==="pear"){
+
+            if(effect==="buff"){
+                effect="none"
+            }else{
+                effect="debuff"
+                effectTimer=200
+            }
+
+        }
+
+        food = spawnFood()
+
+        if(Math.random()<0.4){
+            portalA=randomPos()
+            portalB=randomPos()
+        }
+
+    }else{
+        snake.pop()
+    }
+
+    if(effectTimer>0){
+        effectTimer--
+
+        if(effectTimer===0){
+            effect="none"
+        }
+    }
+
+    if(effect==="buff") speed=80
+    else if(effect==="debuff") speed=200
+    else speed=140
+
+}
+
+function drawGrid(){
+
+    ctx.strokeStyle="#111"
+
+    for(let i=0;i<tiles;i++){
+        ctx.beginPath()
+        ctx.moveTo(i*grid,0)
+        ctx.lineTo(i*grid,canvas.height)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(0,i*grid)
+        ctx.lineTo(canvas.width,i*grid)
+        ctx.stroke()
+    }
+
+}
+
+function drawPortals(){
+
+    portalAnim += 0.1
+
+    let radius = 8 + Math.sin(portalAnim)*4
+
+    ctx.fillStyle="purple"
+    ctx.beginPath()
+    ctx.arc(
+        portalA.x*grid+10,
+        portalA.y*grid+10,
+        radius,
+        0,
+        Math.PI*2
+    )
+    ctx.fill()
+
+    ctx.fillStyle="violet"
+    ctx.beginPath()
+    ctx.arc(
+        portalB.x*grid+10,
+        portalB.y*grid+10,
+        radius,
+        0,
+        Math.PI*2
+    )
+    ctx.fill()
+
+}
+
+function drawFood(){
+
+    if(food.type==="apple"){
+        ctx.fillStyle="red"
+    }
+
+    if(food.type==="mango"){
+        ctx.fillStyle="orange"
+    }
+
+    if(food.type==="pear"){
+        ctx.fillStyle="lightgreen"
+    }
+
+    ctx.fillRect(
+        food.x*grid+3,
+        food.y*grid+3,
+        grid-6,
+        grid-6
+    )
+
+}
+
+function drawSnake(){
+
+    ctx.fillStyle="lime"
+
+    for(let s of snake){
+
+        ctx.fillRect(
+            s.x*grid+1,
+            s.y*grid+1,
+            grid-2,
+            grid-2
+        )
+
+    }
+
+}
+
+function draw(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height)
+
+    drawGrid()
+    drawPortals()
+    drawFood()
+    drawSnake()
+
+}
+
+function gameOver(){
+
+    alert("Game Over!\nScore: "+score)
+    location.reload()
+
+}
+
+function updateUI(){
+
+    document.getElementById("score").textContent=score
+
+    let e = document.getElementById("effect")
+
+    e.textContent = effect
+
+}
+
+let last = 0
+
+function loop(time){
+
+    if(time-last > speed){
+
+        update()
+        draw()
+        updateUI()
+
+        last = time
+    }
+
+    requestAnimationFrame(loop)
+
+}
+
+requestAnimationFrame(loop)
+
+</script>
+
+</body>
+</html>
